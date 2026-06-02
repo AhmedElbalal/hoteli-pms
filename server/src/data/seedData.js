@@ -19,8 +19,21 @@ export const seedData = {
     { id: 'R-3443094066', guestName: 'Gurpreet Singh', email: 'gurpreet@example.com', roomNumber: '210', status: 'CHECKED_OUT', source: 'OTA', checkIn: '2026-05-29', checkOut: '2026-05-30', adults: 1, rate: 149, balance: 0, notes: 'Early checkout note.' }
   ],
   folios: [
-    { id: 'F-R-3471241782', reservationId: 'R-3471241782', guestName: 'Aranshi Kumar', status: 'OPEN', items: [{ id: 'FI-1', type: 'CHARGE', code: 'ROOM', description: 'Room charge', amount: 189, date: '2026-05-29' }, { id: 'FI-2', type: 'PAYMENT', code: 'PREPAID', description: 'Prepaid OTA payment', amount: -189, date: '2026-05-29' }] },
-    { id: 'F-R-3465975079', reservationId: 'R-3465975079', guestName: 'Tianxi Pu', status: 'OPEN', items: [{ id: 'FI-3', type: 'CHARGE', code: 'ROOM', description: 'Room charge', amount: 211.33, date: '2026-05-30' }, { id: 'FI-4', type: 'PAYMENT', code: 'VCC', description: 'Virtual card partial payment', amount: -190, date: '2026-05-30' }] }
+    { id: 'F-R-3471241782', reservationId: 'R-3471241782', guestName: 'Aranshi Kumar', status: 'OPEN', items: [
+      { id: 'FI-1', type: 'CHARGE', code: 'ROOM', description: 'Room charge', amount: 189, date: '2026-05-29' },
+      { id: 'FI-1A', type: 'CHARGE', code: 'TPS_ROOM', description: 'TPS / GST on room', amount: 9.45, date: '2026-05-29' },
+      { id: 'FI-1B', type: 'CHARGE', code: 'TVQ_ROOM', description: 'TVQ / QST on room', amount: 18.85, date: '2026-05-29' },
+      { id: 'FI-1C', type: 'CHARGE', code: 'LODGING_TAX', description: 'Taxe d’hébergement / Lodging tax', amount: 6.62, date: '2026-05-29' },
+      { id: 'FI-1D', type: 'CHARGE', code: 'PARKING', description: 'Parking', amount: 30, date: '2026-05-29' },
+      { id: 'FI-1E', type: 'CHARGE', code: 'TPS_PARKING', description: 'TPS / GST on parking', amount: 1.5, date: '2026-05-29' },
+      { id: 'FI-1F', type: 'CHARGE', code: 'TVQ_PARKING', description: 'TVQ / QST on parking', amount: 2.99, date: '2026-05-29' },
+      { id: 'FI-2', type: 'PAYMENT', code: 'PREPAID', description: 'Prepaid OTA payment', amount: -258.41, date: '2026-05-29' }] },
+    { id: 'F-R-3465975079', reservationId: 'R-3465975079', guestName: 'Tianxi Pu', status: 'OPEN', items: [
+      { id: 'FI-3', type: 'CHARGE', code: 'ROOM', description: 'Room charge', amount: 211.33, date: '2026-05-30' },
+      { id: 'FI-3A', type: 'CHARGE', code: 'TPS_ROOM', description: 'TPS / GST on room', amount: 10.57, date: '2026-05-30' },
+      { id: 'FI-3B', type: 'CHARGE', code: 'TVQ_ROOM', description: 'TVQ / QST on room', amount: 21.08, date: '2026-05-30' },
+      { id: 'FI-3C', type: 'CHARGE', code: 'LODGING_TAX', description: 'Taxe d’hébergement / Lodging tax', amount: 7.4, date: '2026-05-30' },
+      { id: 'FI-4', type: 'PAYMENT', code: 'VCC', description: 'Virtual card partial payment', amount: -228.06, date: '2026-05-30' }] }
   ],
   houseAccounts: [
     { id: 'HA-1001', name: 'Prepaid OTA Clearing', status: 'OPEN', owner: 'Accounting', items: [{ id: 'HAI-1', type: 'CHARGE', description: 'VCC short payment', amount: 21.33, date: '2026-05-30' }] },

@@ -1,8 +1,8 @@
 {
-  "name": "hoteli-production-ready",
+  "name": "hoteli-pms-mvp",
   "version": "1.0.0",
   "private": true,
-  "description": "HOTELI Cloud PMS production-ready foundation",
+  "description": "HOTELI Cloud Hotel PMS MVP",
   "scripts": {
     "install:all": "npm install && npm --prefix server install && npm --prefix client install",
     "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",

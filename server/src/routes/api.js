@@ -67,6 +67,35 @@ function syncReservationBalance(db, reservationId) {
 function decorateFolio(folio) {
   return { ...folio, balance: Number(folioBalance(folio).toFixed(2)), taxes: QC_TAX };
 }
+function sendValidation(res, result) {
+  if (result.success) return null;
+  const first = result.error.issues?.[0];
+  return res.status(400).json({
+    error: first?.message || 'Invalid request data',
+    validation: result.error.flatten()
+  });
+}
+function normalizeReservationInput(input) {
+  return {
+    ...input,
+    guestName: String(input.guestName || '').trim(),
+    email: String(input.email || '').trim(),
+    roomNumber: String(input.roomNumber || '').trim(),
+    source: String(input.source || 'Direct').trim() || 'Direct',
+    adults: Number(input.adults || 1),
+    rate: Number(input.rate || 0),
+    parking: Boolean(input.parking),
+    notes: String(input.notes || '').trim()
+  };
+}
+function normalizeMoneyInput(input) {
+  return {
+    ...input,
+    amount: Number(input.amount || 0),
+    description: String(input.description || '').trim(),
+    code: String(input.code || 'MISC').trim() || 'MISC'
+  };
+}
 
 api.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
@@ -106,7 +135,10 @@ api.get('/availability', async (req, res) => {
 
 api.get('/reservations', async (_req, res) => res.json((await readDb()).reservations));
 api.post('/reservations', allowRoles('ADMIN','FRONT_DESK','MANAGER'), async (req, res) => {
-  const data = reservationSchema.parse(req.body);
+  const parsed = reservationSchema.safeParse(normalizeReservationInput(req.body));
+  const validationResponse = sendValidation(res, parsed);
+  if (validationResponse) return validationResponse;
+  const data = parsed.data;
   const db = await readDb();
   if (data.roomNumber) {
     if (!db.rooms.some(r => r.number === data.roomNumber)) return res.status(400).json({ error: 'Room does not exist' });
@@ -121,7 +153,10 @@ api.post('/reservations', allowRoles('ADMIN','FRONT_DESK','MANAGER'), async (req
   await writeDb(db); await logAudit(req.user, 'CREATE_RESERVATION', reservation.id, reservation); res.status(201).json(reservation);
 });
 api.patch('/reservations/:id/status', allowRoles('ADMIN','FRONT_DESK','NIGHT_AUDITOR','MANAGER'), async (req, res) => {
-  const status = z.enum(['UNASSIGNED','ARRIVAL','IN_HOUSE','CHECKED_OUT','CANCELLED','NO_SHOW','BALANCE_REVIEW']).parse(req.body.status);
+  const statusResult = z.enum(['UNASSIGNED','ARRIVAL','IN_HOUSE','CHECKED_OUT','CANCELLED','NO_SHOW','BALANCE_REVIEW']).safeParse(req.body.status);
+  const validationResponse = sendValidation(res, statusResult);
+  if (validationResponse) return validationResponse;
+  const status = statusResult.data;
   const db = await readDb(); const r = db.reservations.find(x => x.id === req.params.id); if (!r) return res.status(404).json({ error: 'Reservation not found' });
   r.status = status;
   const room = db.rooms.find(x => x.number === r.roomNumber);
@@ -130,7 +165,10 @@ api.patch('/reservations/:id/status', allowRoles('ADMIN','FRONT_DESK','NIGHT_AUD
   await writeDb(db); await logAudit(req.user, 'UPDATE_RESERVATION_STATUS', r.id, { status }); res.json(r);
 });
 api.patch('/reservations/:id/assign-room', allowRoles('ADMIN','FRONT_DESK','MANAGER'), async (req, res) => {
-  const roomNumber = z.string().min(1).parse(req.body.roomNumber);
+  const roomResult = z.string().min(1, 'Room number is required').safeParse(String(req.body.roomNumber || '').trim());
+  const validationResponse = sendValidation(res, roomResult);
+  if (validationResponse) return validationResponse;
+  const roomNumber = roomResult.data;
   const db = await readDb(); const r = db.reservations.find(x => x.id === req.params.id); if (!r) return res.status(404).json({ error: 'Reservation not found' });
   if (!roomIsAvailable(db, roomNumber, r.checkIn, r.checkOut, r.id)) return res.status(409).json({ error: 'Room is not available for this reservation date range' });
   r.roomNumber = roomNumber; if (r.status === 'UNASSIGNED') r.status = 'ARRIVAL';
@@ -152,13 +190,13 @@ api.patch('/rooms/:number', allowRoles('ADMIN','FRONT_DESK','MANAGER'), async (r
 api.get('/folios', async (_req, res) => res.json((await readDb()).folios.map(decorateFolio)));
 api.get('/folios/:id', async (req, res) => { const folio = (await readDb()).folios.find(f => f.id === req.params.id); if (!folio) return res.status(404).json({ error: 'Folio not found' }); res.json(decorateFolio(folio)); });
 api.post('/folios/:id/charge', allowRoles('ADMIN','FRONT_DESK','NIGHT_AUDITOR','MANAGER'), async (req, res) => {
-  const data = moneySchema.parse(req.body); const db = await readDb(); const folio = db.folios.find(f => f.id === req.params.id); if (!folio) return res.status(404).json({ error: 'Folio not found' });
+  const parsed = moneySchema.safeParse(normalizeMoneyInput(req.body)); const validationResponse = sendValidation(res, parsed); if (validationResponse) return validationResponse; const data = parsed.data; const db = await readDb(); const folio = db.folios.find(f => f.id === req.params.id); if (!folio) return res.status(404).json({ error: 'Folio not found' });
   addFolioItem(folio, { type: 'CHARGE', code: data.code, description: data.description, amount: data.amount, date: new Date().toISOString().slice(0,10) });
   syncReservationBalance(db, folio.reservationId);
   await writeDb(db); await logAudit(req.user, 'POST_FOLIO_CHARGE', folio.id, data); res.json(decorateFolio(folio));
 });
 api.post('/folios/:id/payment', allowRoles('ADMIN','FRONT_DESK','NIGHT_AUDITOR','MANAGER'), async (req, res) => {
-  const data = moneySchema.parse(req.body); const db = await readDb(); const folio = db.folios.find(f => f.id === req.params.id); if (!folio) return res.status(404).json({ error: 'Folio not found' });
+  const parsed = moneySchema.safeParse(normalizeMoneyInput(req.body)); const validationResponse = sendValidation(res, parsed); if (validationResponse) return validationResponse; const data = parsed.data; const db = await readDb(); const folio = db.folios.find(f => f.id === req.params.id); if (!folio) return res.status(404).json({ error: 'Folio not found' });
   addFolioItem(folio, { type: 'PAYMENT', code: data.code, description: data.description, amount: -data.amount, date: new Date().toISOString().slice(0,10) });
   syncReservationBalance(db, folio.reservationId);
   await writeDb(db); await logAudit(req.user, 'POST_FOLIO_PAYMENT', folio.id, data); res.json(decorateFolio(folio));
@@ -170,22 +208,51 @@ api.post('/house-accounts', allowRoles('ADMIN','NIGHT_AUDITOR','MANAGER'), async
   db.houseAccounts.unshift(account); await writeDb(db); await logAudit(req.user, 'CREATE_HOUSE_ACCOUNT', account.id, account); res.status(201).json(account);
 });
 api.post('/house-accounts/:id/item', allowRoles('ADMIN','NIGHT_AUDITOR','MANAGER'), async (req, res) => {
-  const data = moneySchema.parse(req.body); const db = await readDb(); const account = db.houseAccounts.find(a => a.id === req.params.id); if (!account) return res.status(404).json({ error: 'House account not found' });
+  const parsed = moneySchema.safeParse(normalizeMoneyInput(req.body)); const validationResponse = sendValidation(res, parsed); if (validationResponse) return validationResponse; const data = parsed.data; const db = await readDb(); const account = db.houseAccounts.find(a => a.id === req.params.id); if (!account) return res.status(404).json({ error: 'House account not found' });
   account.items.push({ id: `HAI-${nanoid(6)}`, type: req.body.type === 'PAYMENT' ? 'PAYMENT' : 'CHARGE', description: data.description, amount: req.body.type === 'PAYMENT' ? -data.amount : data.amount, date: new Date().toISOString().slice(0,10) });
   await writeDb(db); await logAudit(req.user, 'POST_HOUSE_ACCOUNT_ITEM', account.id, data); res.json({ ...account, balance: accountBalance(account) });
 });
 
 api.get('/night-audit', async (_req, res) => res.json((await readDb()).nightAudits));
 api.post('/night-audit/run', allowRoles('ADMIN','NIGHT_AUDITOR','MANAGER'), async (req, res) => {
-  const db = await readDb(); const date = req.body.date || new Date().toISOString().slice(0,10);
+  const db = await readDb();
+  const date = req.body.date || new Date().toISOString().slice(0,10);
   if (db.nightAudits.some(a => a.date === date && a.status === 'LOCKED')) return res.status(409).json({ error: 'Audit date already locked' });
-  const arrivals = db.reservations.filter(r => r.checkIn === date && r.status === 'ARRIVAL');
-  const noShows = arrivals.filter(r => r.status === 'ARRIVAL');
-  noShows.forEach(r => { r.status = 'NO_SHOW'; const folio = db.folios.find(f => f.reservationId === r.id); if (folio) addFolioItem(folio, { code: 'NO_SHOW', description: 'No-show fee', amount: 50, date }); syncReservationBalance(db, r.id); });
-  const roomRevenue = db.folios.flatMap(f => f.items).filter(i => i.date === date && i.code === 'ROOM').reduce((s,i)=>s+Number(i.amount||0),0);
-  const taxes = db.folios.flatMap(f => f.items).filter(i => i.date === date && ['TPS_ROOM','TVQ_ROOM','LODGING_TAX','TPS_PARKING','TVQ_PARKING'].includes(i.code)).reduce((s,i)=>s+Number(i.amount||0),0);
-  const audit = { id: `NA-${date}`, date, status: 'LOCKED', noShows: noShows.length, arrivals: arrivals.length, departures: db.reservations.filter(r=>r.checkOut===date).length, inHouse: db.reservations.filter(r=>r.status==='IN_HOUSE').length, paymentBatchStatus: Number(req.body.paymentMismatch || 0) === 0 ? 'Balanced' : 'Mismatch Review', paymentMismatch: Number(req.body.paymentMismatch || 0), roomRevenue: Number(roomRevenue.toFixed(2)), taxes: Number(taxes.toFixed(2)), roomTaxPosted: true, lockedAt: new Date().toISOString(), notes: req.body.notes ? [req.body.notes] : ['Audit posted and locked.'] };
-  db.nightAudits.unshift(audit); await writeDb(db); await logAudit(req.user, 'RUN_NIGHT_AUDIT', audit.id, audit); res.status(201).json(audit);
+
+  const arrivalsForDate = db.reservations.filter(r => r.checkIn === date && ['ARRIVAL','UNASSIGNED'].includes(r.status));
+  const departuresForDate = db.reservations.filter(r => r.checkOut === date && ['IN_HOUSE','BALANCE_REVIEW'].includes(r.status));
+  const noShows = arrivalsForDate.filter(r => r.status === 'ARRIVAL');
+
+  noShows.forEach(r => {
+    r.status = 'NO_SHOW';
+    const folio = db.folios.find(f => f.reservationId === r.id);
+    if (folio) {
+      addFolioItem(folio, { code: 'NO_SHOW', description: 'No-show fee', amount: 50, date });
+      syncReservationBalance(db, r.id);
+    }
+  });
+
+  const datedItems = db.folios.flatMap(f => (f.items || []).map(i => ({ ...i, folioId: f.id, guestName: f.guestName }))).filter(i => i.date === date);
+  const roomRevenue = datedItems.filter(i => i.code === 'ROOM').reduce((s,i)=>s+Number(i.amount||0),0);
+  const parkingRevenue = datedItems.filter(i => i.code === 'PARKING').reduce((s,i)=>s+Number(i.amount||0),0);
+  const taxes = datedItems.filter(i => ['TPS_ROOM','TVQ_ROOM','LODGING_TAX','TPS_PARKING','TVQ_PARKING'].includes(i.code)).reduce((s,i)=>s+Number(i.amount||0),0);
+  const payments = datedItems.filter(i => i.type === 'PAYMENT').reduce((s,i)=>s+Math.abs(Number(i.amount||0)),0);
+
+  const audit = {
+    id: `NA-${date}`, date, status: 'LOCKED',
+    noShows: noShows.length, arrivals: arrivalsForDate.length, departures: departuresForDate.length,
+    inHouse: db.reservations.filter(r=>r.status==='IN_HOUSE').length,
+    paymentBatchStatus: Number(req.body.paymentMismatch || 0) === 0 ? 'Balanced' : 'Mismatch Review',
+    paymentMismatch: Number(req.body.paymentMismatch || 0),
+    roomRevenue: Number(roomRevenue.toFixed(2)), parkingRevenue: Number(parkingRevenue.toFixed(2)),
+    taxes: Number(taxes.toFixed(2)), payments: Number(payments.toFixed(2)),
+    roomTaxPosted: true, lockedAt: new Date().toISOString(),
+    notes: req.body.notes ? [String(req.body.notes)] : ['Audit posted and locked.']
+  };
+  db.nightAudits.unshift(audit);
+  await writeDb(db);
+  await logAudit(req.user, 'RUN_NIGHT_AUDIT', audit.id, audit);
+  res.status(201).json(audit);
 });
 
 api.get('/reports/revenue', async (_req, res) => {
@@ -194,11 +261,13 @@ api.get('/reports/revenue', async (_req, res) => {
   const summary = items.reduce((acc, i) => { acc[i.code] = Number(((acc[i.code] || 0) + Number(i.amount || 0)).toFixed(2)); return acc; }, {});
   res.json({ metrics: computeMetrics(db), summary, items, nightAudits: db.nightAudits, openBalances: db.reservations.filter(r => r.balance > 0) });
 });
-api.get('/reports/downtime', async (_req, res) => {
+api.get('/reports/downtime', async (req, res) => {
   const db = await readDb();
+  const date = String(req.query.date || new Date().toISOString().slice(0,10));
   res.json({
-    arrivals: db.reservations.filter(r => ['ARRIVAL','UNASSIGNED'].includes(r.status)),
-    departures: db.reservations.filter(r => r.status === 'IN_HOUSE'),
+    date,
+    arrivals: db.reservations.filter(r => r.checkIn === date && ['ARRIVAL','UNASSIGNED'].includes(r.status)),
+    departures: db.reservations.filter(r => r.checkOut === date && !['CANCELLED','NO_SHOW'].includes(r.status)),
     inHouse: db.reservations.filter(r => r.status === 'IN_HOUSE'),
     highBalances: db.reservations.filter(r => Number(r.balance || 0) >= 100),
     generatedAt: new Date().toISOString()
