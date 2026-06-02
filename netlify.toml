@@ -1,7 +1,8 @@
 [build]
   base = "client"
-  command = "npm ci && npm run build"
+  command = "npm install --include=dev && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
+  NPM_FLAGS = "--include=dev"
