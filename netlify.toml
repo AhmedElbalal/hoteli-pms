@@ -1,8 +1,10 @@
 [build]
   base = "client"
-  command = "npm install --include=dev && npm run build"
+  command = "npm run build"
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
-  NPM_FLAGS = "--include=dev"
+  NODE_VERSION = "20.11.1"
+  NPM_VERSION = "10.2.4"
+  NPM_CONFIG_PRODUCTION = "false"
+  NPM_FLAGS = "--include=dev --legacy-peer-deps --no-audit --no-fund"
