@@ -1,15 +1,11 @@
 {
   "name": "hoteli-pms-mvp",
   "version": "1.0.0",
-  "private": true,
-  "description": "HOTELI Cloud Hotel PMS MVP",
   "scripts": {
-    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
-    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
-    "start": "npm --prefix server start",
-    "test": "npm --prefix server test",
-    "build": "npm --prefix client run build",
-    "seed": "npm --prefix server run seed"
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client"
   },
-  "devDependencies": { "concurrently": "^9.1.0" }
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
 }

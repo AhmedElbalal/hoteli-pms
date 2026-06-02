@@ -1,6 +1,6 @@
 export function computeMetrics(db) {
   const rooms = db.rooms.length;
-  const occupied = db.reservations.filter(r => ['IN_HOUSE','ARRIVAL','BALANCE_REVIEW'].includes(r.status)).length;
+  const occupied = db.reservations.filter(r => ['IN_HOUSE', 'ARRIVAL', 'BALANCE_REVIEW'].includes(r.status)).length;
   const roomRevenue = db.reservations.reduce((s, r) => s + Number(r.rate || 0), 0);
   const adr = occupied ? roomRevenue / occupied : 0;
   const occupancy = rooms ? (occupied / rooms) * 100 : 0;

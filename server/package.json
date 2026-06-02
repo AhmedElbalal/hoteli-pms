@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --ignore src/data/db.json --ignore src/data/*.json src/index.js",
+    "dev": "nodemon --ignore src/data/db.json src/index.js",
     "start": "node src/index.js",
     "seed": "node src/seed.js",
     "test": "node --test"

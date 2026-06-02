@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   Home, CalendarDays, BedDouble, ReceiptText, WalletCards, MoonStar,
-  BarChart3, LifeBuoy, ScrollText, LogOut, RefreshCcw, Search
+  BarChart3, LifeBuoy, ScrollText, LogOut, RefreshCcw
 } from 'lucide-react';
 import './styles/global.css';
 import { api, auth, setSession, getUser, clearSession } from './lib/api';
@@ -70,7 +70,7 @@ function App() {
           <button className="btn secondary" onClick={load} disabled={refreshing}><RefreshCcw size={16} /> {refreshing ? t.refreshing : t.refresh}</button>
         </div>
       </header>
-      <div className="mobile-nav">{nav.map(([k,,l]) => <button key={k} className={page === k ? 'active' : ''} onClick={() => setPage(k)}>{l}</button>)}</div>
+      <div className="mobile-nav">{nav.map(([k, , l]) => <button key={k} className={page === k ? 'active' : ''} onClick={() => setPage(k)}>{l}</button>)}</div>
       {err && <div className="card"><span className="pill red">{err}</span></div>}
       {!data ? <div className="card">Loading...</div> : <Page page={page} t={t} data={data} reload={load} lang={lang} />}
     </main>
@@ -80,12 +80,12 @@ function App() {
 function Page(p) {
   return p.page === 'dashboard' ? <Dashboard {...p} /> :
     p.page === 'reservations' ? <Reservations {...p} /> :
-    p.page === 'rooms' ? <Rooms {...p} /> :
-    p.page === 'folios' ? <Folios {...p} /> :
-    p.page === 'house' ? <House {...p} /> :
-    p.page === 'audit' ? <NightAudit {...p} /> :
-    p.page === 'reports' ? <Reports {...p} /> :
-    p.page === 'support' ? <Support {...p} /> : <Logs {...p} />;
+      p.page === 'rooms' ? <Rooms {...p} /> :
+        p.page === 'folios' ? <Folios {...p} /> :
+          p.page === 'house' ? <House {...p} /> :
+            p.page === 'audit' ? <NightAudit {...p} /> :
+              p.page === 'reports' ? <Reports {...p} /> :
+                p.page === 'support' ? <Support {...p} /> : <Logs {...p} />;
 }
 
 function Dashboard({ t, data }) {
@@ -98,12 +98,15 @@ function Dashboard({ t, data }) {
   ];
   return <>
     <div className="grid"><Metric title={t.revenue} val={money(m.roomRevenue)} /><Metric title={t.adr} val={money(m.adr)} /><Metric title={t.occupancy} val={`${m.occupancy.toFixed(1)}%`} /><Metric title={t.revpar} val={money(m.revpar)} /></div>
-    <div className="grid2" style={{ marginTop: 16 }}><div className="card"><h2>{t.revenueOverview}</h2><ResponsiveContainer height={280}><BarChart data={[{ d: t.rooms, v: m.roomRevenue }, { d: t.balance, v: m.openBalances }, { d: t.adr, v: m.adr }, { d: t.revpar, v: m.revpar }]}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="d" /><YAxis /><Tooltip formatter={money} /><Bar dataKey="v" radius={[8,8,0,0]} /></BarChart></ResponsiveContainer></div><div className="card"><h2>{t.roomStatus}</h2><ResponsiveContainer height={280}><PieChart><Pie data={pie} dataKey="value" nameKey="name" label outerRadius={95}>{pie.map(x => <Cell key={x.name} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
+    <div className="grid2" style={{ marginTop: 16 }}>
+      <div className="card"><h2>{t.revenueOverview}</h2><ResponsiveContainer height={280}><BarChart data={[{ d: t.rooms, v: m.roomRevenue }, { d: t.balance, v: m.openBalances }, { d: t.adr, v: m.adr }, { d: t.revpar, v: m.revpar }]}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="d" /><YAxis /><Tooltip formatter={money} /><Bar dataKey="v" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
+      <div className="card"><h2>{t.roomStatus}</h2><ResponsiveContainer height={280}><PieChart><Pie data={pie} dataKey="value" nameKey="name" label outerRadius={95}>{pie.map(x => <Cell key={x.name} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
+    </div>
     <div className="card" style={{ marginTop: 16 }}><h2>{t.liveReservations}</h2><ReservationTable rows={data.reservations} t={t} /></div>
   </>;
 }
 function Metric({ title, val }) { return <div className="card metric"><small>{title}</small><h2>{val}</h2><p className="muted">Updated from the HOTELI API</p></div>; }
-function ReservationTable({ rows, t }) { return <table className="table"><thead><tr><th>ID</th><th>{t.guest}</th><th>{t.room}</th><th>{t.status}</th><th>{t.rate}</th><th>{t.balance}</th><th>{t.actions}</th></tr></thead><tbody>{rows.map(r => <tr key={r.id}><td><b>{r.id}</b></td><td>{r.guestName}<br/><small className="muted">{r.source}</small></td><td>{r.roomNumber || <span className="pill amber">{t.unassigned}</span>}</td><td><span className="pill">{r.status}</span></td><td>{money(r.rate)}</td><td>{money(r.balance)}</td><td><small>{r.checkIn} → {r.checkOut}</small></td></tr>)}</tbody></table>; }
+function ReservationTable({ rows, t }) { return <table className="table"><thead><tr><th>ID</th><th>{t.guest}</th><th>{t.room}</th><th>{t.status}</th><th>{t.rate}</th><th>{t.balance}</th><th>{t.actions}</th></tr></thead><tbody>{rows.map(r => <tr key={r.id}><td><b>{r.id}</b></td><td>{r.guestName}<br /><small className="muted">{r.source}</small></td><td>{r.roomNumber || <span className="pill amber">{t.unassigned}</span>}</td><td><span className="pill">{r.status}</span></td><td>{money(r.rate)}</td><td>{money(r.balance)}</td><td><small>{r.checkIn} → {r.checkOut}</small></td></tr>)}</tbody></table>; }
 
 function Reservations({ t, reload, data }) {
   const [f, setF] = useState({ guestName: '', email: '', roomNumber: '', source: 'Direct', checkIn: today, checkOut: tomorrow, adults: 1, rate: 159, parking: false, notes: '' });
@@ -113,11 +116,11 @@ function Reservations({ t, reload, data }) {
     const av = await api(`/availability?checkIn=${f.checkIn}&checkOut=${f.checkOut}`);
     setAvailability(av.rooms);
   }
-  useEffect(() => { loadAvailability().catch(() => {}); }, [f.checkIn, f.checkOut]);
+  useEffect(() => { loadAvailability().catch(() => { }); }, [f.checkIn, f.checkOut]);
   const canSave = f.guestName.trim().length >= 2 && f.checkIn && f.checkOut && Number(f.rate) > 0;
   async function save() {
     setMsg('');
-    if (!canSave) { setMsg(t.guestRequired || 'Guest name, dates, and rate are required.'); return; }
+    if (!canSave) { setMsg(t.guestRequired); return; }
     try {
       await api('/reservations', { method: 'POST', body: JSON.stringify({ ...f, guestName: f.guestName.trim(), adults: Number(f.adults), rate: Number(f.rate), parking: Boolean(f.parking) }) });
       setF({ guestName: '', email: '', roomNumber: '', source: 'Direct', checkIn: today, checkOut: tomorrow, adults: 1, rate: 159, parking: false, notes: '' });
@@ -130,7 +133,7 @@ function Reservations({ t, reload, data }) {
   return <div className="stack">
     <div className="card"><h2>{t.newReservation}</h2>{msg && <p className="pill amber">{msg}</p>}
       <div className="form">
-        <div><input className="input" placeholder={t.guest} value={f.guestName} onChange={e => setF({ ...f, guestName: e.target.value })} />{f.guestName.trim().length > 0 && f.guestName.trim().length < 2 && <small className="error-text">{t.guestRequired || 'Guest name must be at least 2 characters.'}</small>}</div>
+        <div><input className="input" placeholder={t.guest} value={f.guestName} onChange={e => setF({ ...f, guestName: e.target.value })} />{f.guestName.trim().length > 0 && f.guestName.trim().length < 2 && <small className="error-text">{t.guestRequired}</small>}</div>
         <input className="input" placeholder="Email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} />
         <input className="input" placeholder={t.source} value={f.source} onChange={e => setF({ ...f, source: e.target.value })} />
         <input className="input" type="date" value={f.checkIn} onChange={e => setF({ ...f, checkIn: e.target.value })} />
@@ -164,14 +167,14 @@ function Folios({ t }) {
   async function open(id) { setSelected(await api(`/folios/${id}`)); }
   async function pay() { if (!selected || !payment) return; const f = await api(`/folios/${selected.id}/payment`, { method: 'POST', body: JSON.stringify({ amount: Number(payment), description: 'Guest payment', code: 'PAYMENT' }) }); setSelected(f); setPayment(0); load(); }
   const totals = selected ? {
-    room: selected.items.filter(i => i.code === 'ROOM').reduce((s,i)=>s+Number(i.amount||0),0),
-    lodging: selected.items.filter(i => i.code === 'LODGING_TAX').reduce((s,i)=>s+Number(i.amount||0),0),
-    tps: selected.items.filter(i => i.code.includes('TPS')).reduce((s,i)=>s+Number(i.amount||0),0),
-    tvq: selected.items.filter(i => i.code.includes('TVQ')).reduce((s,i)=>s+Number(i.amount||0),0),
-    parking: selected.items.filter(i => i.code === 'PARKING').reduce((s,i)=>s+Number(i.amount||0),0),
-    payments: selected.items.filter(i => i.type === 'PAYMENT').reduce((s,i)=>s+Number(i.amount||0),0)
+    room: selected.items.filter(i => i.code === 'ROOM').reduce((s, i) => s + Number(i.amount || 0), 0),
+    lodging: selected.items.filter(i => i.code === 'LODGING_TAX').reduce((s, i) => s + Number(i.amount || 0), 0),
+    tps: selected.items.filter(i => i.code.includes('TPS')).reduce((s, i) => s + Number(i.amount || 0), 0),
+    tvq: selected.items.filter(i => i.code.includes('TVQ')).reduce((s, i) => s + Number(i.amount || 0), 0),
+    parking: selected.items.filter(i => i.code === 'PARKING').reduce((s, i) => s + Number(i.amount || 0), 0),
+    payments: selected.items.filter(i => i.type === 'PAYMENT').reduce((s, i) => s + Number(i.amount || 0), 0)
   } : null;
-  return <div className="grid2"><div className="card"><h2>{t.folios}</h2><table className="table"><tbody>{rows.map(f => <tr key={f.id} onClick={() => open(f.id)} className="clickable"><td><b>{f.id}</b><br/>{f.guestName}</td><td>{money(f.balance)}</td></tr>)}</tbody></table></div>{selected && <div className="card"><h2>{t.folioContent}: {selected.id}</h2><p><b>{selected.guestName}</b> · <span className="pill">{selected.status}</span></p><div className="grid"><Metric title="Room" val={money(totals.room)} /><Metric title="TPS" val={money(totals.tps)} /><Metric title="TVQ" val={money(totals.tvq)} /><Metric title="Taxe d’hébergement" val={money(totals.lodging)} /></div><div className="grid" style={{marginTop:12}}><Metric title="Parking" val={money(totals.parking)} /><Metric title="Payments" val={money(totals.payments)} /><Metric title={t.balance} val={money(selected.balance)} /></div><table className="table"><thead><tr><th>{t.date}</th><th>{t.code}</th><th>{t.description}</th><th>{t.amount}</th></tr></thead><tbody>{selected.items.map(i => <tr key={i.id}><td>{i.date}</td><td>{i.code}</td><td>{i.description}</td><td>{money(i.amount)}</td></tr>)}</tbody></table><div className="form"><input className="input" type="number" step="0.01" value={payment} onChange={e => setPayment(e.target.value)} placeholder={t.payment} /><button className="btn" onClick={pay}>{t.postPayment}</button></div></div>}</div>;
+  return <div className="grid2"><div className="card"><h2>{t.folios}</h2><table className="table"><tbody>{rows.map(f => <tr key={f.id} onClick={() => open(f.id)} className="clickable"><td><b>{f.id}</b><br />{f.guestName}</td><td>{money(f.balance)}</td></tr>)}</tbody></table></div>{selected && <div className="card"><h2>{t.folioContent}: {selected.id}</h2><p><b>{selected.guestName}</b> · <span className="pill">{selected.status}</span></p><div className="grid"><Metric title="Room" val={money(totals.room)} /><Metric title="TPS" val={money(totals.tps)} /><Metric title="TVQ" val={money(totals.tvq)} /><Metric title="Taxe d'hébergement" val={money(totals.lodging)} /></div><div className="grid" style={{ marginTop: 12 }}><Metric title="Parking" val={money(totals.parking)} /><Metric title="Payments" val={money(totals.payments)} /><Metric title={t.balance} val={money(selected.balance)} /></div><table className="table"><thead><tr><th>{t.date}</th><th>{t.code}</th><th>{t.description}</th><th>{t.amount}</th></tr></thead><tbody>{selected.items.map(i => <tr key={i.id}><td>{i.date}</td><td>{i.code}</td><td>{i.description}</td><td>{money(i.amount)}</td></tr>)}</tbody></table><div className="form"><input className="input" type="number" step="0.01" value={payment} onChange={e => setPayment(e.target.value)} placeholder={t.payment} /><button className="btn" onClick={pay}>{t.postPayment}</button></div></div>}</div>;
 }
 
 function House({ t }) { const [rows, setRows] = useState([]); useEffect(() => { api('/house-accounts').then(setRows); }, []); return <div className="card"><h2>{t.house}</h2><table className="table"><thead><tr><th>ID</th><th>Name</th><th>Owner</th><th>{t.balance}</th></tr></thead><tbody>{rows.map(a => <tr key={a.id}><td><b>{a.id}</b></td><td>{a.name}</td><td>{a.owner}</td><td>{money(a.balance)}</td></tr>)}</tbody></table></div>; }
@@ -189,10 +192,11 @@ function Reports({ t, data }) {
   const [revenue, setRevenue] = useState(null); const [downtime, setDowntime] = useState(null);
   useEffect(() => { api('/reports/revenue').then(setRevenue); api(`/reports/downtime?date=${today}`).then(setDowntime); }, []);
   const m = data.metrics;
-  return <div className="stack"><div className="card"><h2>{t.revenueReport}</h2><ResponsiveContainer height={280}><LineChart data={[{ x: t.revenue, v: m.roomRevenue }, { x: t.adr, v: m.adr }, { x: t.revpar, v: m.revpar }, { x: t.balance, v: m.openBalances }]}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="x" /><YAxis /><Tooltip formatter={money} /><Line dataKey="v" strokeWidth={3} /></LineChart></ResponsiveContainer>{revenue && <table className="table"><thead><tr><th>{t.code}</th><th>{t.amount}</th></tr></thead><tbody>{Object.entries(revenue.summary).map(([k,v]) => <tr key={k}><td>{k}</td><td>{money(v)}</td></tr>)}</tbody></table>}</div><ReportList title={t.inHouseGuests} rows={downtime?.inHouse || []} t={t} /><ReportList title={`${t.downtimeReport} - ${t.arrivals}`} rows={downtime?.arrivals || []} t={t} /><ReportList title={`${t.downtimeReport} - ${t.departures}`} rows={downtime?.departures || []} t={t} /><ReportList title={`${t.downtimeReport} - ${t.highBalances}`} rows={downtime?.highBalances || []} t={t} /></div>;
+  return <div className="stack"><div className="card"><h2>{t.revenueReport}</h2><ResponsiveContainer height={280}><LineChart data={[{ x: t.revenue, v: m.roomRevenue }, { x: t.adr, v: m.adr }, { x: t.revpar, v: m.revpar }, { x: t.balance, v: m.openBalances }]}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="x" /><YAxis /><Tooltip formatter={money} /><Line dataKey="v" strokeWidth={3} /></LineChart></ResponsiveContainer>{revenue && <table className="table"><thead><tr><th>{t.code}</th><th>{t.amount}</th></tr></thead><tbody>{Object.entries(revenue.summary).map(([k, v]) => <tr key={k}><td>{k}</td><td>{money(v)}</td></tr>)}</tbody></table>}</div><ReportList title={t.inHouseGuests} rows={downtime?.inHouse || []} t={t} /><ReportList title={`${t.downtimeReport} - ${t.arrivals}`} rows={downtime?.arrivals || []} t={t} /><ReportList title={`${t.downtimeReport} - ${t.departures}`} rows={downtime?.departures || []} t={t} /><ReportList title={`${t.downtimeReport} - ${t.highBalances}`} rows={downtime?.highBalances || []} t={t} /></div>;
 }
-function ReportList({ title, rows, t }) { return <div className="card"><h2>{title}</h2><table className="table"><thead><tr><th>{t.guest}</th><th>{t.room}</th><th>{t.status}</th><th>{t.balance}</th></tr></thead><tbody>{rows.map((r,i) => <tr key={`${r.id}-${i}`}><td>{r.guestName}</td><td>{r.roomNumber || '-'}</td><td>{r.status}</td><td>{money(r.balance)}</td></tr>)}</tbody></table></div>; }
+function ReportList({ title, rows, t }) { return <div className="card"><h2>{title}</h2><table className="table"><thead><tr><th>{t.guest}</th><th>{t.room}</th><th>{t.status}</th><th>{t.balance}</th></tr></thead><tbody>{rows.map((r, i) => <tr key={`${r.id}-${i}`}><td>{r.guestName}</td><td>{r.roomNumber || '-'}</td><td>{r.status}</td><td>{money(r.balance)}</td></tr>)}</tbody></table></div>; }
 
 function Support() { const [title, setTitle] = useState(''), [rows, setRows] = useState([]); async function load() { setRows(await api('/support-tickets')); } useEffect(() => { load(); }, []); async function save() { await api('/support-tickets', { method: 'POST', body: JSON.stringify({ title, priority: 'MEDIUM' }) }); setTitle(''); load(); } return <div className="card"><h2>Tech Support</h2><input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ticket title" /><button className="btn" onClick={save}>Open Ticket</button><table className="table"><tbody>{rows.map(x => <tr key={x.id}><td><b>{x.id}</b></td><td>{x.title}</td><td><span className="pill amber">{x.status}</span></td></tr>)}</tbody></table></div>; }
 function Logs() { const [rows, setRows] = useState([]); useEffect(() => { api('/audit-logs').then(setRows).catch(e => setRows([{ id: 'error', action: e.message, entity: 'Permission', at: '' }])); }, []); return <div className="card"><h2>Audit Logs</h2><table className="table"><tbody>{rows.map(l => <tr key={l.id}><td>{l.at}</td><td><b>{l.action}</b></td><td>{l.entity}</td><td>{l.user}</td></tr>)}</tbody></table></div>; }
+
 createRoot(document.getElementById('root')).render(<App />);

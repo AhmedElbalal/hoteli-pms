@@ -13,16 +13,19 @@ const PORT = process.env.PORT || 4100;
 
 await ensureDb();
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || true, credentials: true }));
+app.use(cors({
+  origin: process.env.CLIENT_ORIGIN ? process.env.CLIENT_ORIGIN.split(',') : true,
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
 app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'HOTELI', version: '1.0.0' }));
 app.use('/api', api);
 app.use(errorHandler);
 
-const server = app.listen(PORT, () => console.log(`HOTELI API running on http://localhost:${PORT}`));
+const server = app.listen(PORT, '0.0.0.0', () => console.log(`HOTELI API running on http://0.0.0.0:${PORT}`));
 server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') console.error(`Port ${PORT} is already in use. Set PORT=4101 or close the old Node process.`);
+  if (err.code === 'EADDRINUSE') console.error(`Port ${PORT} is already in use.`);
   throw err;
 });
 export { app };
