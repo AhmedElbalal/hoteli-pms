@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  FRONT_DESK
+  NIGHT_AUDITOR
+  HOUSEKEEPING
+  ACCOUNTING
+}
+
+enum ReservationStatus {
+  ARRIVAL
+  UNASSIGNED
+  IN_HOUSE
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum FolioStatus {
+  OPEN
+  CLOSED
+}
+
+enum LedgerItemType {
+  CHARGE
+  PAYMENT
+  ADJUSTMENT
+  REFUND
+}
+
+enum RoomStatus {
+  VACANT_READY
+  VACANT_DIRTY
+  OCCUPIED
+  GREEN_STAY
+  MAINTENANCE
+  OUT_OF_ORDER
+}
+
+enum HousekeepingStatus {
+  CLEAN
+  DIRTY
+  INSPECTED
+  STAYOVER
+  ECO
+}
+
+enum NightAuditStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  LOCKED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Property {
+  id          String   @id
+  name        String
+  roomsCount  Int      @default(0)
+  currency    String   @default("CAD")
+  roomTaxRate Decimal  @default(0.05) @db.Decimal(8, 5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id           String   @id
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  completedAudits NightAudit[] @relation("CompletedAudits")
+}
+
+model Room {
+  id           String             @id
+  number       String             @unique
+  type         String
+  status       RoomStatus
+  housekeeping HousekeepingStatus
+  rateBase     Decimal            @db.Decimal(10, 2)
+  notes        String             @default("")
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  reservations Reservation[]
+}
+
+model Reservation {
+  id         String            @id
+  guestName  String
+  email      String?
+  roomNumber String?
+  status     ReservationStatus
+  source     String            @default("Direct")
+  checkIn    String
+  checkOut   String
+  adults     Int               @default(1)
+  rate       Decimal           @db.Decimal(10, 2)
+  balance    Decimal           @default(0) @db.Decimal(12, 2)
+  parking    Boolean           @default(false)
+  notes      String            @default("")
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  room  Room?  @relation(fields: [roomNumber], references: [number], onDelete: SetNull, onUpdate: Cascade)
+  folio Folio?
+
+  @@index([checkIn])
+  @@index([checkOut])
+  @@index([status])
+  @@index([roomNumber])
+}
+
+model Folio {
+  id            String      @id
+  reservationId String      @unique
+  guestName     String
+  status        FolioStatus @default(OPEN)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  items       FolioItem[]
+}
+
+model FolioItem {
+  id          String         @id
+  folioId     String
+  type        LedgerItemType
+  code        String
+  description String
+  amount      Decimal        @db.Decimal(12, 2)
+  date        String
+  createdAt   DateTime       @default(now())
+
+  folio Folio @relation(fields: [folioId], references: [id], onDelete: Cascade)
+
+  @@index([folioId])
+  @@index([date])
+}
+
+model HouseAccount {
+  id        String      @id
+  name      String
+  status    FolioStatus @default(OPEN)
+  owner     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  items HouseAccountItem[]
+}
+
+model HouseAccountItem {
+  id             String         @id
+  houseAccountId String
+  type           LedgerItemType
+  description    String
+  amount         Decimal        @db.Decimal(12, 2)
+  date           String
+  createdAt      DateTime       @default(now())
+
+  houseAccount HouseAccount @relation(fields: [houseAccountId], references: [id], onDelete: Cascade)
+
+  @@index([houseAccountId])
+  @@index([date])
+}
+
+model NightAudit {
+  id            String           @id
+  businessDate  String           @unique
+  status        NightAuditStatus @default(OPEN)
+  startedAt     DateTime         @default(now())
+  completedAt   DateTime?
+  completedById String?
+  summary       Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  completedBy User? @relation("CompletedAudits", fields: [completedById], references: [id], onDelete: SetNull)
+}
+
+model SupportTicket {
+  id          String         @id
+  subject     String
+  description String
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+  owner       String?
+  createdBy   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model AuditLog {
+  id        String   @id
+  at        DateTime @default(now())
+  userEmail String
+  role      String
+  action    String
+  entity    String
+  details   Json?
+
+  @@index([at])
+  @@index([entity])
+  @@index([userEmail])
+}
