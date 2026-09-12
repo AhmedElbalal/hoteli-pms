@@ -92,12 +92,32 @@ prismaFinanceRouter.patch('/reservations/:id/status', allowRoles('ADMIN', 'FRONT
     if (!statusResult.success) return res.status(400).json({ error: 'Invalid reservation status' });
 
     const status = statusResult.data;
+    const overrideOutstandingBalance = req.body.overrideOutstandingBalance === true;
+    const overrideReason = String(req.body.overrideReason || '').trim();
+
+    if (overrideOutstandingBalance && !['ADMIN', 'MANAGER'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Only ADMIN or MANAGER may override an outstanding balance at checkout' });
+    }
+    if (overrideOutstandingBalance && overrideReason.length < 5) {
+      return res.status(400).json({ error: 'An override reason of at least 5 characters is required' });
+    }
+
     const reservation = await prisma.$transaction(async (tx) => {
       const current = await tx.reservation.findUnique({ where: { id: req.params.id } });
       if (!current) {
         const error = new Error('Reservation not found');
         error.statusCode = 404;
         throw error;
+      }
+
+      if (status === 'CHECKED_OUT') {
+        const balance = await updateReservationBalance(tx, current.id);
+        if (Math.abs(balance) > 0.01 && !overrideOutstandingBalance) {
+          const error = new Error(`Outstanding balance of ${balance.toFixed(2)} must be settled before checkout`);
+          error.statusCode = 409;
+          error.balance = balance;
+          throw error;
+        }
       }
 
       const updated = await tx.reservation.update({ where: { id: current.id }, data: { status } });
@@ -115,10 +135,20 @@ prismaFinanceRouter.patch('/reservations/:id/status', allowRoles('ADMIN', 'FRONT
       return updated;
     });
 
-    await writeAudit(req.user, 'UPDATE_RESERVATION_STATUS', reservation.id, { status });
+    await writeAudit(req.user, 'UPDATE_RESERVATION_STATUS', reservation.id, {
+      status,
+      ...(status === 'CHECKED_OUT' && overrideOutstandingBalance
+        ? { overrideOutstandingBalance: true, overrideReason }
+        : {})
+    });
     res.json(reservationToApi(reservation));
   } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ error: error.message });
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        error: error.message,
+        ...(error.balance !== undefined ? { balance: error.balance } : {})
+      });
+    }
     next(error);
   }
 });
