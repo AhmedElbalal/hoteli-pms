@@ -47,6 +47,10 @@ function money(value) {
   return Number(value || 0);
 }
 
+function safeJson(value) {
+  return JSON.parse(JSON.stringify(value ?? {}));
+}
+
 function roomToApi(room) {
   return {
     ...room,
@@ -88,7 +92,7 @@ async function writeAudit(user, action, entity, details = {}) {
       role: user?.role || 'system',
       action,
       entity,
-      details
+      details: safeJson(details)
     }
   });
 }
