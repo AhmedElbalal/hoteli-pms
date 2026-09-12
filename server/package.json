@@ -1,14 +1,20 @@
 {
   "name": "hoteli-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "nodemon --ignore src/data/db.json src/index.js",
     "start": "node src/index.js",
     "seed": "node src/seed.js",
-    "test": "node --test"
+    "test": "node --test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
+    "@prisma/client": "6.15.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
@@ -21,7 +27,11 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
+    "prisma": "6.15.0",
     "supertest": "^7.0.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "nodemonConfig": {
     "ignore": [
