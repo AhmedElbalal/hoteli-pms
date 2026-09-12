@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { prismaCoreRouter } from './routes/prismaCore.js';
 import { prismaFinanceRouter } from './routes/prismaFinance.js';
+import { prismaOpsRouter } from './routes/prismaOps.js';
 import { api } from './routes/api.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { ensureDb } from './utils/db.js';
@@ -35,6 +36,7 @@ app.get('/api/health', (_req, res) => res.json({
 // Prisma-backed routes take precedence when DATABASE_URL is configured.
 app.use('/api', prismaCoreRouter);
 app.use('/api', prismaFinanceRouter);
+app.use('/api', prismaOpsRouter);
 
 // Remaining endpoints continue to use the legacy implementation during migration.
 app.use('/api', api);
