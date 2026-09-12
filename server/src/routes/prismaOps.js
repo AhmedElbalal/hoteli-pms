@@ -23,6 +23,7 @@ const housekeepingToApi = {
 };
 
 const ticketPriorities = new Set(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+const TAX_CODES = new Set(['TPS_ROOM', 'TVQ_ROOM', 'LODGING_TAX', 'TPS_PARKING', 'TVQ_PARKING']);
 
 function money(value) {
   return Number(value || 0);
@@ -171,6 +172,111 @@ prismaOpsRouter.post('/support-tickets', async (req, res, next) => {
     await writeAudit(req.user, 'CREATE_SUPPORT_TICKET', ticket.id, ticketToApi(ticket));
     res.status(201).json(ticketToApi(ticket));
   } catch (error) {
+    next(error);
+  }
+});
+
+prismaOpsRouter.get('/night-audit', async (_req, res, next) => {
+  try {
+    const audits = await prisma.nightAudit.findMany({ orderBy: { businessDate: 'desc' } });
+    res.json(audits.map(nightAuditToApi));
+  } catch (error) {
+    next(error);
+  }
+});
+
+prismaOpsRouter.post('/night-audit/run', allowRoles('ADMIN', 'NIGHT_AUDITOR', 'MANAGER'), async (req, res, next) => {
+  try {
+    const date = String(req.body.date || new Date().toISOString().slice(0, 10));
+    const paymentMismatch = Number(req.body.paymentMismatch || 0);
+    const notes = req.body.notes ? [String(req.body.notes)] : ['Audit posted and locked.'];
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must use YYYY-MM-DD' });
+    if (!Number.isFinite(paymentMismatch)) return res.status(400).json({ error: 'paymentMismatch must be a number' });
+
+    const existing = await prisma.nightAudit.findUnique({ where: { businessDate: date } });
+    if (existing?.status === 'LOCKED') return res.status(409).json({ error: 'Audit date already locked' });
+
+    const completedAt = new Date();
+
+    const audit = await prisma.$transaction(async tx => {
+      const reservations = await tx.reservation.findMany({ orderBy: { createdAt: 'desc' } });
+      const arrivalsForDate = reservations.filter(r => r.checkIn === date && ['ARRIVAL', 'UNASSIGNED'].includes(r.status));
+      const departuresForDate = reservations.filter(r => r.checkOut === date && ['IN_HOUSE', 'BALANCE_REVIEW'].includes(r.status));
+      const noShows = arrivalsForDate.filter(r => r.status === 'ARRIVAL');
+
+      for (const reservation of noShows) {
+        const folio = await tx.folio.findUnique({ where: { reservationId: reservation.id }, include: { items: true } });
+        let newBalance = money(reservation.balance);
+
+        if (folio) {
+          await tx.folioItem.create({
+            data: {
+              id: `FI-${nanoid(8)}`,
+              folioId: folio.id,
+              type: 'CHARGE',
+              code: 'NO_SHOW',
+              description: 'No-show fee',
+              amount: 50,
+              date
+            }
+          });
+          newBalance = Number((folio.items.reduce((sum, item) => sum + money(item.amount), 0) + 50).toFixed(2));
+        }
+
+        await tx.reservation.update({
+          where: { id: reservation.id },
+          data: { status: 'NO_SHOW', balance: newBalance }
+        });
+      }
+
+      const datedItems = await tx.folioItem.findMany({ where: { date } });
+      const roomRevenue = datedItems.filter(i => i.code === 'ROOM').reduce((sum, i) => sum + money(i.amount), 0);
+      const parkingRevenue = datedItems.filter(i => i.code === 'PARKING').reduce((sum, i) => sum + money(i.amount), 0);
+      const taxes = datedItems.filter(i => TAX_CODES.has(i.code)).reduce((sum, i) => sum + money(i.amount), 0);
+      const payments = datedItems.filter(i => i.type === 'PAYMENT').reduce((sum, i) => sum + Math.abs(money(i.amount)), 0);
+      const inHouse = await tx.reservation.count({ where: { status: 'IN_HOUSE' } });
+
+      const summary = {
+        noShows: noShows.length,
+        arrivals: arrivalsForDate.length,
+        departures: departuresForDate.length,
+        inHouse,
+        paymentBatchStatus: paymentMismatch === 0 ? 'Balanced' : 'Mismatch Review',
+        paymentMismatch,
+        roomRevenue: Number(roomRevenue.toFixed(2)),
+        parkingRevenue: Number(parkingRevenue.toFixed(2)),
+        taxes: Number(taxes.toFixed(2)),
+        payments: Number(payments.toFixed(2)),
+        roomTaxPosted: true,
+        lockedAt: completedAt.toISOString(),
+        notes
+      };
+
+      return tx.nightAudit.upsert({
+        where: { businessDate: date },
+        update: {
+          status: 'LOCKED',
+          completedAt,
+          completedById: req.user?.id || null,
+          summary: safeJson(summary)
+        },
+        create: {
+          id: `NA-${date}`,
+          businessDate: date,
+          status: 'LOCKED',
+          completedAt,
+          completedById: req.user?.id || null,
+          summary: safeJson(summary)
+        }
+      });
+    });
+
+    const response = nightAuditToApi(audit);
+    await writeAudit(req.user, 'RUN_NIGHT_AUDIT', audit.id, response);
+    res.status(201).json(response);
+  } catch (error) {
+    if (error?.code === 'P2002') return res.status(409).json({ error: 'Audit date already locked' });
     next(error);
   }
 });
