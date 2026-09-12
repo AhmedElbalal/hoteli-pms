@@ -23,6 +23,7 @@ enum ReservationStatus {
   CHECKED_OUT
   CANCELLED
   NO_SHOW
+  BALANCE_REVIEW
 }
 
 enum FolioStatus {
