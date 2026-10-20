@@ -16,17 +16,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        run: npm run install:all
-      - name: Update dependency lockfiles on audit branch
-        if: github.ref == 'refs/heads/docs/hoteli-audit-2026' && github.event_name == 'push'
+      - name: Refresh lockfiles before clean install
         run: |
-          npm audit fix --package-lock-only --audit-level=moderate
-          npm audit fix --prefix server --package-lock-only --audit-level=moderate
-          npm audit fix --prefix client --package-lock-only --audit-level=moderate
           npm install --package-lock-only --ignore-scripts
           npm install --prefix server --package-lock-only --ignore-scripts
           npm install --prefix client --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --audit-level=moderate
+          npm audit fix --prefix server --package-lock-only --audit-level=moderate
+          npm audit fix --prefix client --package-lock-only --audit-level=moderate
+      - name: Persist lockfiles on audit branch only
+        if: github.event_name == 'push' && github.ref == 'refs/heads/docs/hoteli-audit-2026'
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json server/package-lock.json client/package-lock.json
@@ -34,7 +34,7 @@ jobs:
             git commit -m "security: persist audited dependency lockfiles"
             git push origin HEAD:docs/hoteli-audit-2026
           fi
-      - name: Install from committed lockfiles
+      - name: Install from refreshed lockfiles
         run: |
           npm ci
           npm ci --prefix server
