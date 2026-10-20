@@ -20,18 +20,21 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState('admin@hoteli.com');
   const [password, setPassword] = useState('demo123');
   const [err, setErr] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   async function submit(e) {
     e.preventDefault();
+    setErr(''); setSubmitting(true);
     try { const data = await auth.login(email, password); setSession(data); onLogin(data.user); }
     catch (x) { setErr(x.message); }
+    finally { setSubmitting(false); }
   }
   return <div className="login"><form className="card" onSubmit={submit}>
-    <h1>HOTELI</h1><p className="muted">Cloud Hotel PMS MVP</p>
+    <h1>HOTELI</h1><p className="muted">Hotel operations · Portfolio demo with fictional data</p>
     {err && <p className="pill red">{err}</p>}
-    <label>Email</label><input className="input" value={email} onChange={e => setEmail(e.target.value)} />
-    <label>Password</label><input className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-    <button className="btn" style={{ width: '100%', marginTop: 10 }}>Login</button>
-    <p className="muted">Demo: admin@hoteli.com / demo123</p>
+    <label htmlFor="login-email">Email</label><input id="login-email" className="input" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} />
+    <label htmlFor="login-password">Password</label><input id="login-password" className="input" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />
+    <button className="btn" disabled={submitting} style={{ width: '100%', marginTop: 10 }}>{submitting ? 'Signing in…' : 'Explore HOTELI'}</button>
+    <div className="demo-login"><p className="muted">Choose a fictional demo role:</p><div className="demo-roles">{[['Administrator', 'admin@hoteli.com'], ['Front desk', 'frontdesk@hoteli.com'], ['Night auditor', 'auditor@hoteli.com'], ['Manager', 'manager@hoteli.com']].map(([label, value]) => <button type="button" key={value} className="btn light" onClick={() => { setEmail(value); setPassword('demo123'); setErr(''); }}>{label}</button>)}</div><small className="muted">Demo password: demo123 · Sample data only</small></div>
   </form></div>;
 }
 
