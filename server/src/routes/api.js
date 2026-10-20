@@ -183,10 +183,12 @@ api.post('/night-audit/run', allowRoles('ADMIN', 'NIGHT_AUDITOR', 'MANAGER'), as
   });
   const datedItems = db.folios.flatMap(f => (f.items || []).map(i => ({ ...i, folioId: f.id, guestName: f.guestName }))).filter(i => i.date === date);
   const roomRevenue = datedItems.filter(i => i.code === 'ROOM').reduce((s, i) => s + Number(i.amount || 0), 0);
+  const roomNightsSold = new Set(db.folios.flatMap(f => (f.items || []).filter(i => i.date === date && i.code === 'ROOM' && Number(i.amount || 0) >= 0).map(() => f.reservationId))).size;
+  const roomsAvailable = db.rooms.filter(r => r.status !== 'Maintenance').length;
   const parkingRevenue = datedItems.filter(i => i.code === 'PARKING').reduce((s, i) => s + Number(i.amount || 0), 0);
   const taxes = datedItems.filter(i => ['TPS_ROOM', 'TVQ_ROOM', 'LODGING_TAX', 'TPS_PARKING', 'TVQ_PARKING'].includes(i.code)).reduce((s, i) => s + Number(i.amount || 0), 0);
   const payments = datedItems.filter(i => i.type === 'PAYMENT').reduce((s, i) => s + Math.abs(Number(i.amount || 0)), 0);
-  const audit = { id: `NA-${date}`, date, status: 'LOCKED', noShows: noShows.length, arrivals: arrivalsForDate.length, departures: departuresForDate.length, inHouse: db.reservations.filter(r => r.status === 'IN_HOUSE').length, paymentBatchStatus: Number(req.body.paymentMismatch || 0) === 0 ? 'Balanced' : 'Mismatch Review', paymentMismatch: Number(req.body.paymentMismatch || 0), roomRevenue: Number(roomRevenue.toFixed(2)), parkingRevenue: Number(parkingRevenue.toFixed(2)), taxes: Number(taxes.toFixed(2)), payments: Number(payments.toFixed(2)), roomTaxPosted: true, lockedAt: new Date().toISOString(), notes: req.body.notes ? [String(req.body.notes)] : ['Audit posted and locked.'] };
+  const audit = { id: `NA-${date}`, date, status: 'LOCKED', noShows: noShows.length, arrivals: arrivalsForDate.length, departures: departuresForDate.length, inHouse: db.reservations.filter(r => r.status === 'IN_HOUSE').length, paymentBatchStatus: Number(req.body.paymentMismatch || 0) === 0 ? 'Balanced' : 'Mismatch Review', paymentMismatch: Number(req.body.paymentMismatch || 0), roomRevenue: Number(roomRevenue.toFixed(2)), roomNightsSold, roomsAvailable, parkingRevenue: Number(parkingRevenue.toFixed(2)), taxes: Number(taxes.toFixed(2)), payments: Number(payments.toFixed(2)), roomTaxPosted: true, lockedAt: new Date().toISOString(), notes: req.body.notes ? [String(req.body.notes)] : ['Audit posted and locked.'] };
   db.nightAudits.unshift(audit); await writeDb(db); await logAudit(req.user, 'RUN_NIGHT_AUDIT', audit.id, audit); res.status(201).json(audit);
 });
 
