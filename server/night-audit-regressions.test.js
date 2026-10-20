@@ -14,7 +14,10 @@ test('multi-night reservation earns room revenue on each stayed hotel date, not 
   const login = await request(app).post('/api/auth/login').send({ email: 'auditor@hoteli.com', password: 'demo123' });
   assert.equal(login.status, 200);
   const auth = { Authorization: 'Bearer ' + login.body.token };
-  const created = await request(app).post('/api/reservations').set(auth).send({
+  const adminLogin = await request(app).post('/api/auth/login').send({ email: 'admin@hoteli.com', password: 'demo123' });
+  assert.equal(adminLogin.status, 200);
+  const adminAuth = { Authorization: 'Bearer ' + adminLogin.body.token };
+  const created = await request(app).post('/api/reservations').set(adminAuth).send({
     guestName: 'Regression Multi Night', checkIn: '2035-07-10', checkOut: '2035-07-12',
     adults: 1, rate: 100, source: 'Direct'
   });
@@ -31,10 +34,13 @@ test('no-show reservation must not count as a sold occupied room night', async (
   const login = await request(app).post('/api/auth/login').send({ email: 'auditor@hoteli.com', password: 'demo123' });
   assert.equal(login.status, 200);
   const auth = { Authorization: 'Bearer ' + login.body.token };
+  const adminLogin = await request(app).post('/api/auth/login').send({ email: 'admin@hoteli.com', password: 'demo123' });
+  assert.equal(adminLogin.status, 200);
+  const adminAuth = { Authorization: 'Bearer ' + adminLogin.body.token };
   const rooms = await request(app).get('/api/rooms').set(auth);
   const available = rooms.body.find(r => r.status !== 'Maintenance');
   assert.ok(available, 'Need a room for the regression fixture');
-  const created = await request(app).post('/api/reservations').set(auth).send({
+  const created = await request(app).post('/api/reservations').set(adminAuth).send({
     guestName: 'Regression No Show', roomNumber: available.number,
     checkIn: '2035-08-10', checkOut: '2035-08-11',
     adults: 1, rate: 100, source: 'Direct'
@@ -50,10 +56,13 @@ test('maintenance rooms are excluded from available inventory at audit close', a
   const login = await request(app).post('/api/auth/login').send({ email: 'auditor@hoteli.com', password: 'demo123' });
   assert.equal(login.status, 200);
   const auth = { Authorization: 'Bearer ' + login.body.token };
+  const adminLogin = await request(app).post('/api/auth/login').send({ email: 'admin@hoteli.com', password: 'demo123' });
+  assert.equal(adminLogin.status, 200);
+  const adminAuth = { Authorization: 'Bearer ' + adminLogin.body.token };
   const rooms = await request(app).get('/api/rooms').set(auth);
   const room = rooms.body.find(r => r.status !== 'Maintenance');
   assert.ok(room);
-  const changed = await request(app).patch('/api/rooms/' + room.number).set(auth).send({ status: 'Maintenance' });
+  const changed = await request(app).patch('/api/rooms/' + room.number).set(adminAuth).send({ status: 'Maintenance' });
   assert.equal(changed.status, 200, JSON.stringify(changed.body));
   const updated = await request(app).get('/api/rooms').set(auth);
   const expected = updated.body.filter(r => r.status !== 'Maintenance').length;
