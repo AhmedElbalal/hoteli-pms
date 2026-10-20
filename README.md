@@ -1,6 +1,8 @@
-# HOTELI — Hotel Property Management System (Portfolio Demo)
+# HOTELI — Hotel Property Management System
 
-HOTELI is a personal, full-stack project I am building based on my hands-on experience in hotel operations and night auditing. I wanted to explore how everyday front-desk tasks, reservations, room statuses, folios, and reporting could work together in one application. It is a work in progress, built with React/Vite and an Express API.
+HOTELI is a personal project inspired by my work in hotel front-desk operations and night auditing. I started building it to explore how reservations, room status, guest folios, and end-of-day reporting could fit together in one system.
+
+The project uses React and Vite for the interface and an Express API for the backend. It is still in development, and some workflows need more testing.
 
 > **Demo only.** All sample records are fictional and the app is not intended for real guest data, live payments, or production hotel operations.
 
@@ -8,11 +10,11 @@ HOTELI is a personal, full-stack project I am building based on my hands-on expe
 
 **[Open HOTELI demo](https://hoteli-preview-2026.onrender.com)**
 
-The public preview uses fictional sample records. It runs on free hosting, so the API may take a little time to wake up. Please do not enter real guest information or payment details.
+The public preview uses fictional sample records. It may take a little time to load after a period of inactivity. Please do not enter real guest information or payment details.
 
 ## Screenshots
 
-I have captured mobile screenshots of the manager dashboard, night-auditor dashboard, and night-audit screen. These will be added here after the image files are uploaded to the repository.
+Screenshots of the manager dashboard, night-auditor dashboard, and night-audit screen are being prepared for this section.
 
 ## Try the demo locally
 
@@ -80,6 +82,6 @@ npm audit --prefix client --audit-level=moderate
 
 ## Project scope
 
-This is a **portfolio MVP**, not a commercial PMS. The demo illustrates practical hospitality workflows, UI engineering, API development, validation, and automated checks. A real deployment would require stronger data isolation, hardened authentication, persistent database infrastructure, backups, payment-provider integration, and operational security review.
+This is a **portfolio MVP**, not a commercial PMS. The demo brings together hospitality workflows, a web interface, an API, and some automated checks. A real deployment would require stronger data isolation, hardened authentication, persistent database infrastructure, backups, payment-provider integration, and operational security review.
 
 **Source and progress:** development changes are reviewed on the experimental branch before any approved merge into `main`.
