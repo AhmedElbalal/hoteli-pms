@@ -30,28 +30,31 @@ test('future reservation does not increase recognized room revenue before stay',
 
 
 test('night audit posts one room night and cannot post the same date twice', async () => {
-  const login = await request(app).post('/api/auth/login').send({ email: 'auditor@hoteli.com', password: 'demo123' });
-  assert.equal(login.status, 200, JSON.stringify(login.body));
-  const auth = { Authorization: `Bearer ${login.body.token}` };
+  const frontDeskLogin = await request(app).post('/api/auth/login').send({ email: 'frontdesk@hoteli.com', password: 'demo123' });
+  assert.equal(frontDeskLogin.status, 200, JSON.stringify(frontDeskLogin.body));
+  const frontDeskAuth = { Authorization: `Bearer ${frontDeskLogin.body.token}` };
+  const auditorLogin = await request(app).post('/api/auth/login').send({ email: 'auditor@hoteli.com', password: 'demo123' });
+  assert.equal(auditorLogin.status, 200, JSON.stringify(auditorLogin.body));
+  const auditorAuth = { Authorization: `Bearer ${auditorLogin.body.token}` };
   const date = '2035-06-10';
-  const created = await request(app).post('/api/reservations').set(auth).send({
+  const created = await request(app).post('/api/reservations').set(frontDeskAuth).send({
     guestName: 'Audit Revenue Test', roomNumber: '202', checkIn: date,
     checkOut: '2035-06-12', adults: 1, rate: 200, parking: false
   });
   assert.equal(created.status, 201, JSON.stringify(created.body));
-  const checkIn = await request(app).patch(`/api/reservations/${created.body.id}/status`).set(auth).send({ status: 'IN_HOUSE' });
+  const checkIn = await request(app).patch(`/api/reservations/${created.body.id}/status`).set(auditorAuth).send({ status: 'IN_HOUSE' });
   assert.equal(checkIn.status, 200, JSON.stringify(checkIn.body));
-  const first = await request(app).post('/api/night-audit/run').set(auth).send({ date });
+  const first = await request(app).post('/api/night-audit/run').set(auditorAuth).send({ date });
   assert.equal(first.status, 201, JSON.stringify(first.body));
-  const folio = await request(app).get(`/api/folios/F-${created.body.id}`).set(auth);
+  const folio = await request(app).get(`/api/folios/F-${created.body.id}`).set(auditorAuth);
   assert.equal(folio.status, 200);
   const nightlyRoomItems = folio.body.items.filter(i => i.code === 'ROOM' && i.date === date);
   assert.equal(nightlyRoomItems.length, 1, 'Exactly one nightly room charge should be posted');
   assert.equal(nightlyRoomItems[0].amount, 200);
   assert.equal(first.body.roomRevenue >= 200, true, 'Audit should include the posted room charge');
-  const duplicate = await request(app).post('/api/night-audit/run').set(auth).send({ date });
+  const duplicate = await request(app).post('/api/night-audit/run').set(auditorAuth).send({ date });
   assert.equal(duplicate.status, 409, JSON.stringify(duplicate.body));
-  const folioAfter = await request(app).get(`/api/folios/F-${created.body.id}`).set(auth);
+  const folioAfter = await request(app).get(`/api/folios/F-${created.body.id}`).set(auditorAuth);
   assert.equal(folioAfter.body.items.filter(i => i.code === 'ROOM' && i.date === date).length, 1);
 });
 
