@@ -181,9 +181,31 @@ api.post('/night-audit/run', allowRoles('ADMIN', 'NIGHT_AUDITOR', 'MANAGER'), as
     const folio = db.folios.find(f => f.reservationId === r.id);
     if (folio) { addFolioItem(folio, { code: 'NO_SHOW', description: 'No-show fee', amount: 50, date }); syncReservationBalance(db, r.id); }
   });
+  // Recognize one earned room night per eligible reservation and business date.
+  // Existing arrival-date ROOM postings are not duplicated. Subsequent nights
+  // are posted at audit close; no-shows/cancellations never count as stayed nights.
+  const eligibleStays = db.reservations.filter(r =>
+    r.checkIn <= date && date < r.checkOut &&
+    !['NO_SHOW', 'CANCELLED'].includes(r.status) &&
+    (r.status === 'IN_HOUSE' || r.status === 'CHECKED_OUT' ||
+      (r.status === 'UNASSIGNED' && r.checkIn < r.checkOut))
+  );
+  for (const stay of eligibleStays) {
+    if (date <= stay.checkIn) continue;
+    const folio = db.folios.find(f => f.reservationId === stay.id);
+    if (!folio || folio.items.some(i => i.code === 'ROOM' && i.date === date)) continue;
+    postRoomTaxPackage(folio, { roomRate: Number(stay.rate || 0), parking: false, date });
+    syncReservationBalance(db, stay.id);
+  }
   const datedItems = db.folios.flatMap(f => (f.items || []).map(i => ({ ...i, folioId: f.id, guestName: f.guestName }))).filter(i => i.date === date);
-  const roomRevenue = datedItems.filter(i => i.code === 'ROOM').reduce((s, i) => s + Number(i.amount || 0), 0);
-  const roomNightsSold = new Set(db.folios.flatMap(f => (f.items || []).filter(i => i.date === date && i.code === 'ROOM' && Number(i.amount || 0) >= 0).map(() => f.reservationId))).size;
+  const eligibleIds = new Set(eligibleStays.map(r => r.id));
+  const roomEntries = db.folios.flatMap(f =>
+    eligibleIds.has(f.reservationId)
+      ? (f.items || []).filter(i => i.date === date && i.code === 'ROOM').map(i => ({ ...i, reservationId: f.reservationId }))
+      : []
+  );
+  const roomRevenue = roomEntries.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const roomNightsSold = new Set(roomEntries.filter(i => Number(i.amount || 0) >= 0).map(i => i.reservationId)).size;
   const roomsAvailable = db.rooms.filter(r => r.status !== 'Maintenance').length;
   const parkingRevenue = datedItems.filter(i => i.code === 'PARKING').reduce((s, i) => s + Number(i.amount || 0), 0);
   const taxes = datedItems.filter(i => ['TPS_ROOM', 'TVQ_ROOM', 'LODGING_TAX', 'TPS_PARKING', 'TVQ_PARKING'].includes(i.code)).reduce((s, i) => s + Number(i.amount || 0), 0);
