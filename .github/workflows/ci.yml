@@ -21,8 +21,11 @@ jobs:
       - name: Build client
         run: npm run build
       - name: Audit root dependencies
+        if: always()
         run: npm audit --audit-level=moderate
       - name: Audit server dependencies
+        if: always()
         run: npm audit --prefix server --audit-level=moderate
       - name: Audit client dependencies
+        if: always()
         run: npm audit --prefix client --audit-level=moderate
