@@ -365,3 +365,11 @@ body {
     opacity: .5;
     cursor: not-allowed
 }
+/* Portfolio demo login: accessible role shortcuts and clear feedback */
+.login .card { max-width: 460px; }
+.login label { display: block; font-weight: 700; margin-top: 10px; }
+.login input:focus-visible, .btn:focus-visible, .select:focus-visible, .mobile-nav button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+.demo-login { margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+.demo-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.demo-roles .btn { margin: 0; min-height: 42px; white-space: normal; }
+@media (max-width: 420px) { .demo-roles { grid-template-columns: 1fr; } }
