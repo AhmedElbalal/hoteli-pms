@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { pathToFileURL } from 'node:url';
 import { api } from './routes/api.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { ensureDb } from './utils/db.js';
@@ -23,9 +24,12 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'HOTELI', versio
 app.use('/api', api);
 app.use(errorHandler);
 
-const server = app.listen(PORT, '0.0.0.0', () => console.log(`HOTELI API running on http://0.0.0.0:${PORT}`));
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') console.error(`Port ${PORT} is already in use.`);
-  throw err;
-});
+// Importing the app in a test must not leave an HTTP listener running.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const server = app.listen(PORT, '0.0.0.0', () => console.log(`HOTELI API running on http://0.0.0.0:${PORT}`));
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') console.error(`Port ${PORT} is already in use.`);
+    throw err;
+  });
+}
 export { app };

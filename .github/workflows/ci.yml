@@ -1,0 +1,40 @@
+name: HOTELI CI
+on:
+  push:
+    branches: [main, docs/hoteli-audit-2026]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify committed lockfiles are unchanged
+        run: |
+          git diff --exit-code -- package-lock.json server/package-lock.json client/package-lock.json
+          git diff --cached --exit-code -- package-lock.json server/package-lock.json client/package-lock.json
+      - name: Install from committed lockfiles
+        run: |
+          npm ci
+          npm ci --prefix server
+          npm ci --prefix client
+      - name: Run server tests
+        run: npm test
+      - name: Build client
+        run: npm run build
+      - name: Audit root dependencies
+        if: always()
+        run: npm audit --audit-level=moderate
+      - name: Audit server dependencies
+        if: always()
+        run: npm audit --prefix server --audit-level=moderate
+      - name: Audit client dependencies
+        if: always()
+        run: npm audit --prefix client --audit-level=moderate

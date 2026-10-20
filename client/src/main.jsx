@@ -20,18 +20,21 @@ function Login({ onLogin }) {
   const [email, setEmail] = useState('admin@hoteli.com');
   const [password, setPassword] = useState('demo123');
   const [err, setErr] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   async function submit(e) {
     e.preventDefault();
+    setErr(''); setSubmitting(true);
     try { const data = await auth.login(email, password); setSession(data); onLogin(data.user); }
     catch (x) { setErr(x.message); }
+    finally { setSubmitting(false); }
   }
   return <div className="login"><form className="card" onSubmit={submit}>
-    <h1>HOTELI</h1><p className="muted">Cloud Hotel PMS MVP</p>
+    <h1>HOTELI</h1><p className="muted">Hotel operations · Portfolio demo with fictional data</p>
     {err && <p className="pill red">{err}</p>}
-    <label>Email</label><input className="input" value={email} onChange={e => setEmail(e.target.value)} />
-    <label>Password</label><input className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-    <button className="btn" style={{ width: '100%', marginTop: 10 }}>Login</button>
-    <p className="muted">Demo: admin@hoteli.com / demo123</p>
+    <label htmlFor="login-email">Email</label><input id="login-email" className="input" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} />
+    <label htmlFor="login-password">Password</label><input id="login-password" className="input" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />
+    <button className="btn" disabled={submitting} style={{ width: '100%', marginTop: 10 }}>{submitting ? 'Signing in…' : 'Explore HOTELI'}</button>
+    <div className="demo-login"><p className="muted">Choose a fictional demo role:</p><div className="demo-roles">{[['Administrator', 'admin@hoteli.com'], ['Front desk', 'frontdesk@hoteli.com'], ['Night auditor', 'auditor@hoteli.com'], ['Manager', 'manager@hoteli.com']].map(([label, value]) => <button type="button" key={value} className="btn light" onClick={() => { setEmail(value); setPassword('demo123'); setErr(''); }}>{label}</button>)}</div><small className="muted">Demo password: demo123 · Sample data only</small></div>
   </form></div>;
 }
 
@@ -90,19 +93,49 @@ function Page(p) {
 
 function Dashboard({ t, data }) {
   const m = data.metrics;
+  const rooms = Array.isArray(data.rooms) ? data.rooms : [];
+  const reservations = Array.isArray(data.reservations) ? data.reservations : [];
+  const counts = {
+    occupied: rooms.filter(r => r.status === 'Occupied').length,
+    ready: rooms.filter(r => r.status === 'Vacant Ready').length,
+    dirty: rooms.filter(r => r.status === 'Vacant Dirty').length,
+    maintenance: rooms.filter(r => r.status === 'Maintenance').length
+  };
   const pie = [
-    { name: t.occupied, value: data.rooms.filter(r => r.status === 'Occupied').length },
-    { name: t.vacantReady, value: data.rooms.filter(r => r.status === 'Vacant Ready').length },
-    { name: t.dirty, value: data.rooms.filter(r => r.status === 'Vacant Dirty').length },
-    { name: t.maintenance, value: data.rooms.filter(r => r.status === 'Maintenance').length }
+    { name: t.occupied, value: counts.occupied, color: '#2563eb' },
+    { name: t.vacantReady, value: counts.ready, color: '#16a34a' },
+    { name: t.dirty, value: counts.dirty, color: '#f59e0b' },
+    { name: t.maintenance, value: counts.maintenance, color: '#64748b' }
+  ];
+  const arrivals = reservations.filter(r => r.status === 'ARRIVAL' || r.status === 'UNASSIGNED');
+  const inHouse = reservations.filter(r => r.status === 'IN_HOUSE');
+  const needsAssignment = reservations.filter(r => !r.roomNumber && r.status !== 'CHECKED_OUT');
+  const revenueData = [
+    { d: t.rooms, v: Number(m.roomRevenue || 0) },
+    { d: t.balance, v: Number(m.openBalances || 0) },
+    { d: t.adr, v: Number(m.adr || 0) },
+    { d: t.revpar, v: Number(m.revpar || 0) }
   ];
   return <>
-    <div className="grid"><Metric title={t.revenue} val={money(m.roomRevenue)} /><Metric title={t.adr} val={money(m.adr)} /><Metric title={t.occupancy} val={`${m.occupancy.toFixed(1)}%`} /><Metric title={t.revpar} val={money(m.revpar)} /></div>
+    <section className="dashboard-intro">
+      <div><p className="dashboard-eyebrow">HOTELI · Operations overview</p><h2>Property at a glance</h2><p className="muted">Live operational figures from the HOTELI demo API</p></div>
+      <span className="pill">Portfolio demo · Sample data</span>
+    </section>
+    <div className="grid"><Metric title={t.revenue} val={money(m.roomRevenue)} /><Metric title={t.adr} val={money(m.adr)} /><Metric title={t.occupancy} val={`${Number(m.occupancy || 0).toFixed(1)}%`} /><Metric title={t.revpar} val={money(m.revpar)} /></div>
+    <section className="dashboard-quick-stats" aria-label="Operational snapshot">
+      <div className="card"><small>{t.occupied}</small><strong>{counts.occupied} / {rooms.length}</strong></div>
+      <div className="card"><small>{t.vacantReady}</small><strong>{counts.ready}</strong></div>
+      <div className="card"><small>{t.dirty}</small><strong>{counts.dirty}</strong></div>
+      <div className="card"><small>{t.unassigned}</small><strong>{needsAssignment.length}</strong></div>
+      <div className="card"><small>Arrivals / unassigned</small><strong>{arrivals.length}</strong></div>
+      <div className="card"><small>In house</small><strong>{inHouse.length}</strong></div>
+    </section>
     <div className="grid2" style={{ marginTop: 16 }}>
-      <div className="card"><h2>{t.revenueOverview}</h2><ResponsiveContainer height={280}><BarChart data={[{ d: t.rooms, v: m.roomRevenue }, { d: t.balance, v: m.openBalances }, { d: t.adr, v: m.adr }, { d: t.revpar, v: m.revpar }]}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="d" /><YAxis /><Tooltip formatter={money} /><Bar dataKey="v" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
-      <div className="card"><h2>{t.roomStatus}</h2><ResponsiveContainer height={280}><PieChart><Pie data={pie} dataKey="value" nameKey="name" label outerRadius={95}>{pie.map(x => <Cell key={x.name} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
+      <div className="card"><h2>{t.revenueOverview}</h2><ResponsiveContainer width="100%" height={280}><BarChart data={revenueData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="d" /><YAxis /><Tooltip formatter={money} /><Bar dataKey="v" fill="#2563eb" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
+      <div className="card"><h2>{t.roomStatus}</h2>{rooms.length ? <ResponsiveContainer width="100%" height={280}><PieChart><Pie data={pie.filter(x => x.value > 0)} dataKey="value" nameKey="name" label outerRadius={95}>{pie.filter(x => x.value > 0).map(x => <Cell key={x.name} fill={x.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer> : <p className="muted">No rooms available in the current data.</p>}
+      <div className="dashboard-legend">{pie.map(x => <span key={x.name}><i style={{ background: x.color }} />{x.name}: {x.value}</span>)}</div></div>
     </div>
-    <div className="card" style={{ marginTop: 16 }}><h2>{t.liveReservations}</h2><ReservationTable rows={data.reservations} t={t} /></div>
+    <div className="card" style={{ marginTop: 16 }}><h2>{t.liveReservations}</h2>{reservations.length ? <div className="table-scroll"><ReservationTable rows={reservations} t={t} /></div> : <p className="muted">No reservations to display.</p>}</div>
   </>;
 }
 function Metric({ title, val }) { return <div className="card metric"><small>{title}</small><h2>{val}</h2><p className="muted">Updated from the HOTELI API</p></div>; }
