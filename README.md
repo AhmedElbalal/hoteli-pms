@@ -1,8 +1,18 @@
 # HOTELI — Hotel Property Management System (Portfolio Demo)
 
-HOTELI is a full-stack **portfolio project** inspired by real hotel front-desk and night-audit workflows. It demonstrates a React/Vite frontend, an Express API, role-based access, reservations, room management, folios, and operational reporting.
+HOTELI is a personal, full-stack project I am building based on my hands-on experience in hotel operations and night auditing. I wanted to explore how everyday front-desk tasks, reservations, room statuses, folios, and reporting could work together in one application. It is a work in progress, built with React/Vite and an Express API.
 
 > **Demo only.** All sample records are fictional and the app is not intended for real guest data, live payments, or production hotel operations.
+
+## Live preview
+
+**[Open HOTELI demo](https://hoteli-preview-2026.onrender.com)**
+
+The public preview uses fictional sample records. It runs on free hosting, so the API may take a little time to wake up. Please do not enter real guest information or payment details.
+
+## Screenshots
+
+I have captured mobile screenshots of the manager dashboard, night-auditor dashboard, and night-audit screen. These will be added here after the image files are uploaded to the repository.
 
 ## Try the demo locally
 
@@ -59,6 +69,14 @@ npm audit --audit-level=moderate
 npm audit --prefix server --audit-level=moderate
 npm audit --prefix client --audit-level=moderate
 ```
+
+## Known limitations and next steps
+
+- This is an evolving learning/portfolio project, not a finished commercial product.
+- Dashboard metrics and room-status totals still need consistency checks.
+- The night-audit screen demonstrates the workflow; further end-to-end validation is needed.
+- The free-hosted preview uses temporary file-based sample data, so changes may not persist after a restart.
+- Mobile layouts and accessibility can be improved as the project develops.
 
 ## Project scope
 
