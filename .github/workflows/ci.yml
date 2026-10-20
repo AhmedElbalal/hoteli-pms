@@ -16,6 +16,14 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm run install:all
+      - name: Refresh safe dependency lockfiles for audit
+        run: |
+          npm audit fix --package-lock-only || true
+          npm audit fix --prefix server --package-lock-only || true
+          npm audit fix --prefix client --package-lock-only || true
+          npm install --package-lock-only --ignore-scripts
+          npm install --prefix server --package-lock-only --ignore-scripts
+          npm install --prefix client --package-lock-only --ignore-scripts
       - name: Run server tests
         run: npm test
       - name: Build client
