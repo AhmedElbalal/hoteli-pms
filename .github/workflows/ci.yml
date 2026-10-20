@@ -6,35 +6,16 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Refresh audited lockfiles on experimental branch
-        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'docs/hoteli-audit-2026') || (github.event_name == 'push' && github.ref == 'refs/heads/docs/hoteli-audit-2026')
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          npm install --prefix server --package-lock-only --ignore-scripts
-          npm install --prefix client --package-lock-only --ignore-scripts
-          npm audit fix --package-lock-only --audit-level=moderate
-          npm audit fix --prefix server --package-lock-only --audit-level=moderate
-          npm audit fix --prefix client --package-lock-only --audit-level=moderate
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json server/package-lock.json client/package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m "security: persist audited dependency lockfiles"
-            git push origin HEAD:docs/hoteli-audit-2026
-          fi
       - name: Verify committed lockfiles are unchanged
         run: |
           git diff --exit-code -- package-lock.json server/package-lock.json client/package-lock.json
