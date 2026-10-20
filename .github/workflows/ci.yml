@@ -20,3 +20,9 @@ jobs:
         run: npm test
       - name: Build client
         run: npm run build
+      - name: Audit root dependencies
+        run: npm audit --audit-level=moderate
+      - name: Audit server dependencies
+        run: npm audit --prefix server --audit-level=moderate
+      - name: Audit client dependencies
+        run: npm audit --prefix client --audit-level=moderate
