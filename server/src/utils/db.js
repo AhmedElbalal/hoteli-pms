@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { seedData } from '../data/seedData.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, '..', 'data', 'db.json');
+const DB_PATH = process.env.HOTELI_DB_PATH || path.join(__dirname, '..', 'data', 'db.json');
 
 export async function ensureDb() {
   try { await fs.access(DB_PATH); } catch { await writeDb(seedData); }
