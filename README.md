@@ -4,9 +4,11 @@ HOTELI is a cloud hotel PMS foundation with React/Vite frontend and Express API 
 
 ## Run locally
 
+Requires Node.js and npm. Use demo data only; this project is not production-ready.
+
 ```cmd
 npm run install:all
-npm run seed
+npm run seed --prefix server
 npm run dev
 ```
 
