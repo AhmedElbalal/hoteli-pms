@@ -1,7 +1,11 @@
 export function computeMetrics(db) {
   const rooms = db.rooms.length;
   const occupied = db.rooms.filter(r => r.status === 'Occupied').length;
-  const roomRevenue = db.reservations.reduce((s, r) => s + Number(r.rate || 0), 0);
+  // Recognize room revenue only after a hotel business date has been audited and locked.
+  // Booking values and advance payments are not earned room revenue.
+  const roomRevenue = (db.nightAudits || [])
+    .filter(a => a.status === 'LOCKED')
+    .reduce((sum, a) => sum + Number(a.roomRevenue || 0), 0);
   const adr = occupied ? roomRevenue / occupied : 0;
   const occupancy = rooms ? (occupied / rooms) * 100 : 0;
   const revpar = rooms ? roomRevenue / rooms : 0;
